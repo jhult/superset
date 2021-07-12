@@ -1,0 +1,38 @@
+# Updated to add Oracle Instant Client
+FROM apache/superset:latest-dev
+
+# Add Oracle Instant Client
+# Original: https://apextips.blogspot.com/2019/09/installing-oracle-instant-client-on.html
+# Updated: https://bitbucket.org/!api/2.0/snippets/mythics/on5GqE/master/files/oracle_instant_client_installer_debian.sh
+USER root
+WORKDIR /tmp
+RUN printf "Running automated Oracle Instant Client installer\n" \
+    \
+    # Install dependencies
+    apt-get update && apt-get install --no-install-recommends --yes alien libaio1 && apt-get clean --yes \
+    # Download files - find latest version here: https://www.oracle.com/database/technologies/instant-client/linux-x86-64-downloads.html
+    && wget https://download.oracle.com/otn_software/linux/instantclient/191000/oracle-instantclient19.10-basic-19.10.0.0.0-1.x86_64.rpm \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/191000/oracle-instantclient19.10-devel-19.10.0.0.0-1.x86_64.rpm \
+    && wget https://download.oracle.com/otn_software/linux/instantclient/191000/oracle-instantclient19.10-sqlplus-19.10.0.0.0-1.x86_64.rpm \
+    \
+    # Install downloaded RPMs 
+    && alien -i oracle-instantclient*.rpm \
+    \
+    # Create Oracle environment script
+    && printf "\n\n# Oracle Client environment\n \
+    export LD_LIBRARY_PATH=/usr/lib/oracle/19.10/client64/lib/${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} \
+    export ORACLE_HOME=/usr/lib/oracle/19.10/client64\n" | tee /etc/profile.d/oracle-env.sh > /dev/null \
+    && rm -rf /tmp/* \
+    && printf "Install complete; please verify"
+
+# End add Oracle Instant Client
+
+# Ensure latest cx_Oracle is installed
+# https://pypi.org/project/cx-Oracle/
+RUN pip install cx_Oracle
+
+USER superset
+
+RUN . /etc/profile.d/oracle-env.sh
+
+WORKDIR /app
